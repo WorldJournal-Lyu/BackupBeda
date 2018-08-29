@@ -195,7 +195,7 @@ Write-Line -Length 50 -Path $log
 
 if(($workDay -eq 4) -and (Test-Path $weeklyPath)){
     Write-Log -Verb "WEEKLY-PDF" -Noun $weeklyPath -Path $log -Type Long -Status System
-    $splin = (Get-WJEmail -Name lyu).MailAddress
+    $splin = (Get-WJEmail -Name splin).MailAddress
     Get-ChildItem ($beda+"weekly") -Include 455*.pdf, 43*.pdf -Recurse | ForEach-Object{
         try{
             Copy-Item $_.FullName $weeklyPath -ErrorAction Stop
@@ -238,9 +238,9 @@ if((Test-Path $back45_wd)){
     }
     Write-Log -Verb "regex" -Noun $regex -Path $log -Type Short -Status Normal
 
-    Get-ChildItemPlus $beda | Where-Object{
+    Get-ChildItem $beda -Recurse | Where-Object{
         !($_.FullName -match $regex)
-    } | Sort-Object -Descending | Move-Files -From $beda -To $back45_wd | ForEach-Object{
+    } | Sort-Object FullName -Descending | Move-Files -From $beda -To $back45_wd | ForEach-Object{
         Write-Log -Verb "moveFrom" -Noun $_.MoveFrom -Path $log -Type Short -Status Normal
         Write-Log -Verb "moveTo" -Noun $_.MoveTo -Path $log -Type Short -Status Normal
         if($_.Status -eq "Bad"){
@@ -284,7 +284,7 @@ if(($weekDay -ne 6) -or ($weekDay -ne 0)){
 Write-Log -Verb "MOVE-FILES" -Noun "backup_wd "-Path $log -Type Long -Status System
 
 if(Test-Path $backup_wd){
-    Get-ChildItemPlus $tpe | Sort-Object -Descending | Move-Files -From $tpe -To $backup_wd | ForEach-Object{
+    Get-ChildItem $tpe -Recurse | Sort-Object FullName -Descending | Move-Files -From $tpe -To $backup_wd | ForEach-Object{
         Write-Log -Verb "moveFrom" -Noun $_.MoveFrom -Path $log -Type Short -Status Normal
         Write-Log -Verb "moveTo" -Noun $_.MoveTo -Path $log -Type Short -Status Normal
         if($_.Status -eq "Bad"){
@@ -314,7 +314,7 @@ $clearList | ForEach-Object{
         if((Get-ChildItem $_).Count -eq 0){
             Write-Log -Verb "IS EMPTY" -Noun $_ -Path $log -Type Long -Status Normal
         }else{
-            Get-ChildItemPlus $_ | Sort-Object -Descending | ForEach-Object{
+            Get-ChildItem $_ -Recurse | Sort-Object FullName -Descending | ForEach-Object{
                 try{
                     $temp = $_.FullName
                     Remove-Item $_.FullName -Force -ErrorAction Stop
@@ -344,7 +344,7 @@ Write-Log -Verb "REMOVE-FILES & REMOVE-ITEM" -Noun "deleteList" -Path $log -Type
 
 $deleteList | ForEach-Object{
     if(Test-Path $_){
-        Get-ChildItemPlus $_ | Sort-Object -Descending | ForEach-Object{
+        Get-ChildItem $_ -Recurse | Sort-Object FullName -Descending | ForEach-Object{
             try{
                 $temp = $_.FullName
                 Remove-Item $_.FullName -Force -ErrorAction Stop
