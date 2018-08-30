@@ -39,28 +39,31 @@ Write-Line -Length 50 -Path $log
 
 
 
-# Date values
+# Define date variables
 
 $workDate     = (Get-Date).AddDays(0)
 $workDate_30  = (Get-Date).AddDays(-30)
 $workDate_30w = (Get-Date).AddDays(-(((Get-Date).DayOfWeek.value__)+(7*30)))
 $workDay      = ($workDate).DayOfWeek.value__ # 0, 1, 2, 3, 4, 5, 6
 
-# Server paths
+# Define server variables
 
 $beda      = (Get-WJPath -Name beda).Path
 $back45    = (Get-WJPath -Name back45).Path
 $back45_wd = $back45 + $workDate.ToString("yyyyMMdd") + "\"
 $back45_30 = $back45 + $workDate_30.ToString("yyyyMMdd") + "\"
+$bedaCount = (Get-ChildItem $beda -Recurse -File -Exclude Thumbs.db).Count
 
-if($workDate -eq 4){
+if($workDay -eq 4){
     $weeklyPath = $back45_wd + "weeklyPDF\"
+    $splin = (Get-WJEmail -Name lyu).MailAddress
 }
 
 $tpe       = (Get-WJPath -Name tpe).Path
 $backup    = (Get-WJPath -Name backup).Path
 $backup_wd = $backup + $workDate.ToString("yyyyMMdd") + "\"
 $backup_30 = $backup + $workDate_30.ToString("yyyyMMdd") + "\"
+$tpeCount  = (Get-ChildItem $tpe -Recurse -File -Exclude Thumbs.db).Count
 
 $graphic   = (Get-WJPath -Name graphic).Path
 $udngroup  = (Get-WJPath -Name udngroup).Path
@@ -75,6 +78,8 @@ $cmpsNJ_30 = $marco_production + "NJ\Compose\" + $workDate_30.ToString("yyyyMMdd
 $cmpsNY_30 = $marco_production + "NY\Compose\" + $workDate_30.ToString("yyyyMMdd") + "\"
 $cmpsNW_30 = $marco_production + "NW\Compose\" + $workDate_30w.ToString("yyyyMMdd") + "\"
 
+# Construct regex
+
 $list      = @("weekly",4)
 $safeList  = @()
 For( $i=0; $i -lt $list.Count; $i+=2 ){ 
@@ -82,7 +87,36 @@ For( $i=0; $i -lt $list.Count; $i+=2 ){
         $safeList += $list[$i] 
     } 
 }
+$regex     = ("^"+(($beda -replace "\\", "\\")) -replace ":", "\:")
+if($safeList.Count -gt 1){
+    $regex = $regex + "("
+    $safeList | ForEach-Object{ $regex = ($regex + $_ + "|") }
+    $regex = $regex.Substring(0, $regex.Length-1)
+    $regex = $regex + ")"
+}elseif($safeList.Count -eq 1){
+    $regex = $regex + "(" + $safeList + ")"
+}elseif($safeList.Count -eq 0){
+    $regex = $regex + "INCLUDE_ALL_FOLDERS"
+}
 
+
+# Define arrays
+
+if($workDay -eq 4){
+    $newList = @( $back45_wd, $weeklyPath, $backup_wd )
+}else{
+    $newList = @( $back45_wd, $backup_wd )
+}
+
+$thumbList   = @( $beda, $tpe, $graphic, $udngroup, $overseas, 
+                  $cmpsAT_30, $cmpsBO_30, $cmpsCH_30, $cmpsDC_30, $cmpsNJ_30, $cmpsNY_30, $cmpsNW_30 )
+
+$clearList   = @( $graphic, $udngroup, $overseas )
+
+$deleteList  = @( $back45_30, $backup_30, 
+                  $cmpsAT_30, $cmpsBO_30, $cmpsCH_30, $cmpsDC_30, $cmpsNJ_30, $cmpsNY_30, $cmpsNW_30 )
+
+# Log variables
 
 Write-Log -Verb "workDate" -Noun $workDate.ToString("yyyyMMdd") -Path $log -Type Short -Status Normal
 Write-Log -Verb "workDate_30" -Noun $workDate_30.ToString("yyyyMMdd") -Path $log -Type Short -Status Normal
@@ -94,16 +128,20 @@ Write-Log -Verb "beda" -Noun $beda -Path $log -Type Short -Status Normal
 Write-Log -Verb "back45" -Noun $back45 -Path $log -Type Short -Status Normal
 Write-Log -Verb "back45_wd" -Noun $back45_wd -Path $log -Type Short -Status Normal
 Write-Log -Verb "back45_30" -Noun $back45_30 -Path $log -Type Short -Status Normal
+Write-Log -Verb "bedaCount" -Noun $bedaCount -Path $log -Type Short -Status Normal
 Write-Line -Length 50 -Path $log
 
 if($workDay -eq 4){
     Write-Log -Verb "weeklyPath" -Noun $weeklyPath -Path $log -Type Short -Status Normal
+    Write-Log -Verb "splin" -Noun $splin -Path $log -Type Short -Status Normal
+    Write-Line -Length 50 -Path $log
 }
 
 Write-Log -Verb "tpe" -Noun $tpe -Path $log -Type Short -Status Normal
 Write-Log -Verb "backup" -Noun $backup -Path $log -Type Short -Status Normal
 Write-Log -Verb "backup_wd" -Noun $backup_wd -Path $log -Type Short -Status Normal
 Write-Log -Verb "backup_30" -Noun $backup_30 -Path $log -Type Short -Status Normal
+Write-Log -Verb "tpeCount" -Noun $tpeCount -Path $log -Type Short -Status Normal
 Write-Line -Length 50 -Path $log
 
 Write-Log -Verb "graphic" -Noun $graphic -Path $log -Type Short -Status Normal
@@ -122,21 +160,13 @@ Write-Log -Verb "cmpsNW_30" -Noun $cmpsNW_30 -Path $log -Type Short -Status Norm
 Write-Line -Length 50 -Path $log
 
 Write-Log -Verb "safeList" -Noun ($safeList -join ", ") -Path $log -Type Short -Status Normal
+Write-Log -Verb "regex" -Noun $regex -Path $log -Type Short -Status Normal
+Write-Line -Length 50 -Path $log
 
-
-if($workDay -eq 4){
-    $newList = @( $back45_wd, $weeklyPath, $backup_wd )
-}else{
-    $newList = @( $back45_wd, $backup_wd )
-}
-
-$thumbList   = @( $beda, $tpe, $graphic, $udngroup, $overseas, 
-                  $cmpsAT_30, $cmpsBO_30, $cmpsCH_30, $cmpsDC_30, $cmpsNJ_30, $cmpsNY_30, $cmpsNW_30 )
-
-$clearList   = @( $graphic, $udngroup, $overseas )
-
-$deleteList  = @( $back45_30, $backup_30, 
-                  $cmpsAT_30, $cmpsBO_30, $cmpsCH_30, $cmpsDC_30, $cmpsNJ_30, $cmpsNY_30, $cmpsNW_30 )
+$newList | ForEach-Object{ Write-Log -Verb "newList" -Noun $_ -Path $log -Type Short -Status Normal }
+$thumbList | ForEach-Object{ Write-Log -Verb "thumbList" -Noun $_ -Path $log -Type Short -Status Normal }
+$clearList | ForEach-Object{ Write-Log -Verb "clearList" -Noun $_ -Path $log -Type Short -Status Normal }
+$deleteList | ForEach-Object{ Write-Log -Verb "deleteList" -Noun $_ -Path $log -Type Short -Status Normal }
 
 Write-Line -Length 50 -Path $log
 
@@ -144,9 +174,9 @@ Write-Line -Length 50 -Path $log
 
 
 
-# Create new paths in $newList
+# 1 Create new folders in $newList
 
-Write-Log -Verb "NEW-ITEM" -Noun "newList" -Path $log -Type Long -Status System
+Write-Log -Verb "CREATE FOLDERS" -Noun "newList" -Path $log -Type Long -Status System; Pause
 
 $newList | ForEach-Object{
     if(Test-Path $_){
@@ -162,6 +192,7 @@ $newList | ForEach-Object{
             $hasError = $true
         }
     }
+    Pause
 }
 
 Write-Line -Length 50 -Path $log
@@ -170,15 +201,15 @@ Write-Line -Length 50 -Path $log
 
 
 
-# Delete thumbnails in paths in $thumbList
+# 2 Delete thumbnails in folders in $thumbList
 
-Write-Log -Verb "DELETE-THUMBS" -Noun "thumbList" -Path $log -Type Long -Status System
+Write-Log -Verb "DELETE THUMBNAILS" -Noun "thumbList" -Path $log -Type Long -Status System; Pause
 
 $thumbList | ForEach-Object{
     Delete-Thumbs $_ | ForEach-Object{
         if( ($_.Status -eq "Bad") -or ($_.Status -eq "Warning") ){
-            $mailMsg = $mailMsg + (Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status -Output String) + "`n"
-            $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status) + "`n"
+            Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status
+            Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status
         }else{
             Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status
         }
@@ -191,11 +222,10 @@ Write-Line -Length 50 -Path $log
 
 
 
-# Backup weekly PDF on Thursday
+# (Thursdays only) Backup weekly PDF for splin
 
 if(($workDay -eq 4) -and (Test-Path $weeklyPath)){
-    Write-Log -Verb "WEEKLY-PDF" -Noun $weeklyPath -Path $log -Type Long -Status System
-    $splin = (Get-WJEmail -Name splin).MailAddress
+    Write-Log -Verb "BACKUP WEEKLY" -Noun $weeklyPath -Path $log -Type Long -Status System; Pause
     Get-ChildItem ($beda+"weekly") -Include 455*.pdf, 43*.pdf -Recurse | ForEach-Object{
         try{
             Copy-Item $_.FullName $weeklyPath -ErrorAction Stop
@@ -220,24 +250,11 @@ Write-Line -Length 50 -Path $log
 
 
 
-# Move $beda to $back45_wd, exclude folders in $safeList
+# 3 Backup $beda to $back45_wd, exclude folders in $safeList
 
-Write-Log -Verb "MOVE-FILES" -Noun "back45_wd "-Path $log -Type Long -Status System
+Write-Log -Verb "BACKUP BEDA" -Noun "back45_wd "-Path $log -Type Long -Status System; Pause
 
-if((Test-Path $back45_wd)){
-    $regex = ("^"+(($beda -replace "\\", "\\")) -replace ":", "\:")
-    if($safeList.Count -gt 1){
-        $regex = $regex + "("
-        $safeList | ForEach-Object{ $regex = ($regex + $_ + "|") }
-        $regex = $regex.Substring(0, $regex.Length-1)
-        $regex = $regex + ")"
-    }elseif($safeList.Count -eq 1){
-        $regex = $regex + "(" + $safeList + ")"
-    }elseif($safeList.Count -eq 0){
-        $regex = $regex + "INCLUDE_ALL_FOLDERS"
-    }
-    Write-Log -Verb "regex" -Noun $regex -Path $log -Type Short -Status Normal
-
+if(Test-Path $back45_wd){
     Get-ChildItem $beda -Recurse | Where-Object{
         !($_.FullName -match $regex)
     } | Sort-Object FullName -Descending | Move-Files -From $beda -To $back45_wd | ForEach-Object{
@@ -261,8 +278,7 @@ Write-Line -Length 50 -Path $log
 
 
 
-
-# Create beda\45101 from Monday thru Friday
+# (Monday to Friday) Create 45101 folder
 
 if(($weekDay -ne 6) -or ($weekDay -ne 0)){
     try{    
@@ -279,9 +295,9 @@ if(($weekDay -ne 6) -or ($weekDay -ne 0)){
 
 
 
-# Move $tpe to $backup_wd
+# 4 Backup $tpe to $backup_wd
 
-Write-Log -Verb "MOVE-FILES" -Noun "backup_wd "-Path $log -Type Long -Status System
+Write-Log -Verb "BACKUP TPE" -Noun "backup_wd "-Path $log -Type Long -Status System; Pause
 
 if(Test-Path $backup_wd){
     Get-ChildItem $tpe -Recurse | Sort-Object FullName -Descending | Move-Files -From $tpe -To $backup_wd | ForEach-Object{
@@ -305,9 +321,9 @@ Write-Line -Length 50 -Path $log
 
 
 
-# Clear contents in $clearList
+# 5 Clear contents in folders in $clearList
 
-Write-Log -Verb "REMOVE-FILES" -Noun "clearList" -Path $log -Type Long -Status System
+Write-Log -Verb "CLEAR FOLDERS" -Noun "clearList" -Path $log -Type Long -Status System; Pause
 
 $clearList | ForEach-Object{
     if(Test-Path $_){
@@ -330,17 +346,16 @@ $clearList | ForEach-Object{
         $mailMsg = $mailMsg + (Write-Log -Verb "NOT EXIST" -Noun $_ -Path $log -Type Long -Status Warning -Output String) + "`n"
         $hasError = $true
     }
+    Pause
 }
 
-Write-Line -Length 50 -Path $log
 
 
 
 
+# 6 Clear and delete folders in $deleteList
 
-# Delete paths in $deleteList
-
-Write-Log -Verb "REMOVE-FILES & REMOVE-ITEM" -Noun "deleteList" -Path $log -Type Long -Status System
+Write-Log -Verb "DELETE FOLDERS" -Noun "deleteList" -Path $log -Type Long -Status System; Pause
 
 $deleteList | ForEach-Object{
     if(Test-Path $_){
@@ -368,9 +383,40 @@ $deleteList | ForEach-Object{
     }else{
         Write-Log -Verb "NOT EXIST" -Noun $_ -Path $log -Type Long -Status Normal
     }
+    Pause
 }
 
 Write-Line -Length 50 -Path $log
+
+
+
+
+
+# 7 Check result and compose mail
+
+if($workDay -eq 4){
+    $back45Count = (Get-ChildItem $back45_wd -Recurse -File -Exclude Thumbs.db).Count - (Get-ChildItem $weeklyPath -Recurse -File -Exclude Thumbs.db).Count
+}else{
+    $back45Count = (Get-ChildItem $back45_wd -Recurse -File -Exclude Thumbs.db).Count
+}
+$backupCount = (Get-ChildItem $backup_wd -Recurse -File -Exclude Thumbs.db).Count
+
+$mailMsg = $mailMsg + $back45_wd + "`n" + "RESULT " + $back45Count + " (EXPECTED " + $bedaCount + ")`n`n"
+$mailMsg = $mailMsg + $backup_wd + "`n" + "RESULT " + $backupCount + " (EXPECTED " + $tpeCount + ")`n`n"
+
+
+$clearList | ForEach-Object{ 
+    $count = (Get-ChildItem $_ -Recurse -Exclude Thumbs.db).Count
+    if( $count -eq 0 ){ $result = "CLEARED" }else{ $result = "NOT CLEARED"; $hasError = $true }
+    $mailMsg = $mailMsg + $_ + "`n" + $result + "`n`n"
+}
+
+$deleteList | ForEach-Object{ 
+    $testpath = (Test-Path $_)
+    if( $testpath -eq $false ){ $result = "DELETED" }else{ $result = "NOT DELETED"; $hasError = $true }
+    $mailMsg = $mailMsg + $_ + "`n" + $result + "`n`n"
+}
+
 
 
 
@@ -405,4 +451,5 @@ $emailParam = @{
     ScriptPath = $scriptPath
     Attachment = $log
 }
+$mailMsg
 Emailv2 @emailParam
