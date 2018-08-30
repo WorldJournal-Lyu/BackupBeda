@@ -23,7 +23,7 @@ $logPath    = $newlog.Directory
 
 $mailFrom   = (Get-WJEmail -Name noreply).MailAddress
 $mailPass   = (Get-WJEmail -Name noreply).Password
-$mailTo     = (Get-WJEmail -Name lyu).MailAddress
+$mailTo     = (Get-WJEmail -Name mis).MailAddress
 $mailSbj    = $scriptName
 $mailMsg    = ""
 
@@ -56,7 +56,8 @@ $bedaCount = (Get-ChildItem $beda -Recurse -File -Exclude Thumbs.db).Count
 
 if($workDay -eq 4){
     $weeklyPath = $back45_wd + "weeklyPDF\"
-    $splin = (Get-WJEmail -Name lyu).MailAddress
+    $splin = (Get-WJEmail -Name splin).MailAddress
+    $lyu = (Get-WJEmail -Name lyu).MailAddress
 }
 
 $tpe       = (Get-WJPath -Name tpe).Path
@@ -98,7 +99,6 @@ if($safeList.Count -gt 1){
 }elseif($safeList.Count -eq 0){
     $regex = $regex + "INCLUDE_ALL_FOLDERS"
 }
-
 
 # Define arrays
 
@@ -176,7 +176,7 @@ Write-Line -Length 50 -Path $log
 
 # 1 Create new folders in $newList
 
-Write-Log -Verb "CREATE FOLDERS" -Noun "newList" -Path $log -Type Long -Status System; Pause
+Write-Log -Verb "CREATE FOLDERS" -Noun "newList" -Path $log -Type Long -Status System
 
 $newList | ForEach-Object{
     if(Test-Path $_){
@@ -192,7 +192,6 @@ $newList | ForEach-Object{
             $hasError = $true
         }
     }
-    Pause
 }
 
 Write-Line -Length 50 -Path $log
@@ -203,7 +202,7 @@ Write-Line -Length 50 -Path $log
 
 # 2 Delete thumbnails in folders in $thumbList
 
-Write-Log -Verb "DELETE THUMBNAILS" -Noun "thumbList" -Path $log -Type Long -Status System; Pause
+Write-Log -Verb "DELETE THUMBNAILS" -Noun "thumbList" -Path $log -Type Long -Status System
 
 $thumbList | ForEach-Object{
     Delete-Thumbs $_ | ForEach-Object{
@@ -225,7 +224,7 @@ Write-Line -Length 50 -Path $log
 # (Thursdays only) Backup weekly PDF for splin
 
 if(($workDay -eq 4) -and (Test-Path $weeklyPath)){
-    Write-Log -Verb "BACKUP WEEKLY" -Noun $weeklyPath -Path $log -Type Long -Status System; Pause
+    Write-Log -Verb "BACKUP WEEKLY" -Noun $weeklyPath -Path $log -Type Long -Status System
     Get-ChildItem ($beda+"weekly") -Include 455*.pdf, 43*.pdf -Recurse | ForEach-Object{
         try{
             Copy-Item $_.FullName $weeklyPath -ErrorAction Stop
@@ -238,7 +237,7 @@ if(($workDay -eq 4) -and (Test-Path $weeklyPath)){
     }
     $weeklyPdfCount = (Get-ChildItem $weeklyPath).Count
     if($weeklyPdfCount -eq 0){
-        Emailv3 -From $mailFrom -Pass $mailPass -To $mailTo -Subject ("ERROR Weekly PDF " + $workDate.ToString("yyyy-MM-dd")) -Body ("Path: "+$weeklyPath+" ("+$weeklyPdfCount+" files)")
+        Emailv3 -From $mailFrom -Pass $mailPass -To $lyu -Subject ("ERROR Weekly PDF " + $workDate.ToString("yyyy-MM-dd")) -Body ("Path: "+$weeklyPath+" ("+$weeklyPdfCount+" files)")
     }else{
         Emailv3 -From $mailFrom -Pass $mailPass -To $splin -Subject ("Weekly PDF " + $workDate.ToString("yyyy-MM-dd")) -Body ("Path: Back45\"+$workDate.ToString("yyyyMMdd")+"\weeklyPDF"+" ("+$weeklyPdfCount+" files)")
     }
@@ -252,7 +251,7 @@ Write-Line -Length 50 -Path $log
 
 # 3 Backup $beda to $back45_wd, exclude folders in $safeList
 
-Write-Log -Verb "BACKUP BEDA" -Noun "back45_wd "-Path $log -Type Long -Status System; Pause
+Write-Log -Verb "BACKUP BEDA" -Noun "back45_wd "-Path $log -Type Long -Status System
 
 if(Test-Path $back45_wd){
     Get-ChildItem $beda -Recurse | Where-Object{
@@ -278,6 +277,7 @@ Write-Line -Length 50 -Path $log
 
 
 
+
 # (Monday to Friday) Create 45101 folder
 
 if(($weekDay -ne 6) -or ($weekDay -ne 0)){
@@ -297,7 +297,7 @@ if(($weekDay -ne 6) -or ($weekDay -ne 0)){
 
 # 4 Backup $tpe to $backup_wd
 
-Write-Log -Verb "BACKUP TPE" -Noun "backup_wd "-Path $log -Type Long -Status System; Pause
+Write-Log -Verb "BACKUP TPE" -Noun "backup_wd "-Path $log -Type Long -Status System
 
 if(Test-Path $backup_wd){
     Get-ChildItem $tpe -Recurse | Sort-Object FullName -Descending | Move-Files -From $tpe -To $backup_wd | ForEach-Object{
@@ -323,7 +323,7 @@ Write-Line -Length 50 -Path $log
 
 # 5 Clear contents in folders in $clearList
 
-Write-Log -Verb "CLEAR FOLDERS" -Noun "clearList" -Path $log -Type Long -Status System; Pause
+Write-Log -Verb "CLEAR FOLDERS" -Noun "clearList" -Path $log -Type Long -Status System
 
 $clearList | ForEach-Object{
     if(Test-Path $_){
@@ -346,7 +346,6 @@ $clearList | ForEach-Object{
         $mailMsg = $mailMsg + (Write-Log -Verb "NOT EXIST" -Noun $_ -Path $log -Type Long -Status Warning -Output String) + "`n"
         $hasError = $true
     }
-    Pause
 }
 
 
@@ -355,7 +354,7 @@ $clearList | ForEach-Object{
 
 # 6 Clear and delete folders in $deleteList
 
-Write-Log -Verb "DELETE FOLDERS" -Noun "deleteList" -Path $log -Type Long -Status System; Pause
+Write-Log -Verb "DELETE FOLDERS" -Noun "deleteList" -Path $log -Type Long -Status System
 
 $deleteList | ForEach-Object{
     if(Test-Path $_){
@@ -383,7 +382,6 @@ $deleteList | ForEach-Object{
     }else{
         Write-Log -Verb "NOT EXIST" -Noun $_ -Path $log -Type Long -Status Normal
     }
-    Pause
 }
 
 Write-Line -Length 50 -Path $log
@@ -404,7 +402,6 @@ $backupCount = (Get-ChildItem $backup_wd -Recurse -File -Exclude Thumbs.db).Coun
 $mailMsg = $mailMsg + $back45_wd + "`n" + "RESULT " + $back45Count + " (EXPECTED " + $bedaCount + ")`n`n"
 $mailMsg = $mailMsg + $backup_wd + "`n" + "RESULT " + $backupCount + " (EXPECTED " + $tpeCount + ")`n`n"
 
-
 $clearList | ForEach-Object{ 
     $count = (Get-ChildItem $_ -Recurse -Exclude Thumbs.db).Count
     if( $count -eq 0 ){ $result = "CLEARED" }else{ $result = "NOT CLEARED"; $hasError = $true }
@@ -416,7 +413,6 @@ $deleteList | ForEach-Object{
     if( $testpath -eq $false ){ $result = "DELETED" }else{ $result = "NOT DELETED"; $hasError = $true }
     $mailMsg = $mailMsg + $_ + "`n" + $result + "`n`n"
 }
-
 
 
 
@@ -451,5 +447,4 @@ $emailParam = @{
     ScriptPath = $scriptPath
     Attachment = $log
 }
-$mailMsg
 Emailv2 @emailParam
