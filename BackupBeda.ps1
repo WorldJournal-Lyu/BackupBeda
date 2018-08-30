@@ -57,7 +57,7 @@ $bedaCount = (Get-ChildItem $beda -Recurse -File -Exclude Thumbs.db).Count
 if($workDay -eq 4){
     $weeklyPath = $back45_wd + "weeklyPDF\"
     $splin = (Get-WJEmail -Name splin).MailAddress
-    $lyu = (Get-WJEmail -Name lyu).MailAddress
+    $lyu   = (Get-WJEmail -Name lyu).MailAddress
 }
 
 $tpe       = (Get-WJPath -Name tpe).Path
@@ -257,8 +257,8 @@ if(Test-Path $back45_wd){
     Get-ChildItem $beda -Recurse | Where-Object{
         !($_.FullName -match $regex)
     } | Sort-Object FullName -Descending | Move-Files -From $beda -To $back45_wd | ForEach-Object{
-        Write-Log -Verb "moveFrom" -Noun $_.MoveFrom -Path $log -Type Short -Status Normal
-        Write-Log -Verb "moveTo" -Noun $_.MoveTo -Path $log -Type Short -Status Normal
+        #Write-Log -Verb "moveFrom" -Noun $_.MoveFrom -Path $log -Type Short -Status Normal
+        #Write-Log -Verb "moveTo" -Noun $_.MoveTo -Path $log -Type Short -Status Normal
         if($_.Status -eq "Bad"){
             $mailMsg = $mailMsg + (Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status -Output String) + "`n"
             $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status -Output String) + "`n"
@@ -301,8 +301,8 @@ Write-Log -Verb "BACKUP TPE" -Noun "backup_wd "-Path $log -Type Long -Status Sys
 
 if(Test-Path $backup_wd){
     Get-ChildItem $tpe -Recurse | Sort-Object FullName -Descending | Move-Files -From $tpe -To $backup_wd | ForEach-Object{
-        Write-Log -Verb "moveFrom" -Noun $_.MoveFrom -Path $log -Type Short -Status Normal
-        Write-Log -Verb "moveTo" -Noun $_.MoveTo -Path $log -Type Short -Status Normal
+        #Write-Log -Verb "moveFrom" -Noun $_.MoveFrom -Path $log -Type Short -Status Normal
+        #Write-Log -Verb "moveTo" -Noun $_.MoveTo -Path $log -Type Short -Status Normal
         if($_.Status -eq "Bad"){
             $mailMsg = $mailMsg + (Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status -Output String) + "`n"
             $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status -Output String) + "`n"
@@ -414,7 +414,7 @@ $deleteList | ForEach-Object{
     $mailMsg = $mailMsg + $_ + "`n" + $result + "`n`n"
 }
 
-
+$mailMsg | Add-Content $log
 
 
 
