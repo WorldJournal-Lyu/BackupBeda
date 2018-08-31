@@ -241,9 +241,8 @@ if(($workDay -eq 4) -and (Test-Path $weeklyPath)){
     }else{
         Emailv3 -From $mailFrom -Pass $mailPass -To $splin -Subject ("Weekly PDF " + $workDate.ToString("yyyy-MM-dd")) -Body ("Path: Back45\"+$workDate.ToString("yyyyMMdd")+"\weeklyPDF"+" ("+$weeklyPdfCount+" files)")
     }
+    Write-Line -Length 50 -Path $log
 }
-
-Write-Line -Length 50 -Path $log
 
 
 
@@ -289,6 +288,7 @@ if(($weekDay -ne 6) -or ($weekDay -ne 0)){
         $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status -Output String) + "`n"
         $hasError = $true
     }
+    Write-Line -Length 50 -Path $log
 }
 
 
@@ -315,6 +315,7 @@ if(Test-Path $backup_wd){
     $mailMsg = $mailMsg + (Write-Log -Verb "NOT EXIST" -Noun $backup_wd -Path $log -Type Long -Status Bad -Output String) + "`n"
     $hasError = $true
 }
+
 Write-Line -Length 50 -Path $log
 
 
@@ -348,6 +349,7 @@ $clearList | ForEach-Object{
     }
 }
 
+Write-Line -Length 50 -Path $log
 
 
 
@@ -415,6 +417,8 @@ $deleteList | ForEach-Object{
 }
 
 $mailMsg | Add-Content $log
+
+
 
 
 
