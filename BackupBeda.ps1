@@ -408,6 +408,8 @@ Write-Line -Length 50 -Path $log
 
 # 8 Check result and compose mail
 
+Write-Log -Verb "COMPOSE" -Noun "mailMsg" -Path $log -Type Long -Status Normal
+
 if($workDay -eq 4){
     $back45Count = (Get-ChildItem $back45_wd -Recurse -File -Exclude Thumbs.db).Count - (Get-ChildItem $weeklyPath -Recurse -File -Exclude Thumbs.db).Count
 }else{
