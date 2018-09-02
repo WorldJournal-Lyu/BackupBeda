@@ -248,7 +248,7 @@ if(($workDay -eq 4) -and (Test-Path $weeklyPath)){
     if($workDay -eq 4){
         Write-Log -Verb "BACKUP WEEKLY SKIPPED" -Noun $weeklyPath -Path $log -Type Long -Status Bad
     }else{
-        Write-Log -Verb "BACKUP WEEKLY SKIPPED" -Noun "not Thursday" -Path $log -Type Long -Status Normal
+        Write-Log -Verb "BACKUP WEEKLY SKIPPED" -Noun "not THURSDAY" -Path $log -Type Long -Status Normal
     }
 }
 
@@ -260,7 +260,7 @@ Write-Line -Length 50 -Path $log
 
 # 4 Backup files in $backupList
 
-Write-Log -Verb "BACKUP FILE" -Noun "backupList "-Path $log -Type Long -Status System
+Write-Log -Verb "BACKUP FILE" -Noun "backupList"-Path $log -Type Long -Status System
 
 For( $b=0; $b -lt $backupList.Count; $b+=2 ){ 
     $source = $backupList[$b]
@@ -318,13 +318,13 @@ Write-Line -Length 50 -Path $log
 
 if(($workDay -eq 6) -or ($workDay -eq 0)){
     # on saturday and sunday, don't make this folder
-    Write-Log -Verb "MKDIR SKIPPED" -Noun ($beda+"45101") -Path $log -Type Long -Status Normal
+    Write-Log -Verb "MKDIR 45101 SKIPPED" -Noun "not WEEKDAY" -Path $log -Type Long -Status Normal
 }else{
     try{    
         New-Item -ItemType Directory -Path ($beda+"45101") | Out-Null
-        Write-Log -Verb "MKDIR" -Noun ($beda+"45101") -Path $log -Type Long -Status Good
+        Write-Log -Verb "MKDIR 45101" -Noun ($beda+"45101") -Path $log -Type Long -Status Good
     }catch{
-        $mailMsg = $mailMsg + (Write-Log -Verb "MKDIR" -Noun ($beda+"45101") -Path $log -Type Long -Status Bad -Output String) + "`n"
+        $mailMsg = $mailMsg + (Write-Log -Verb "MKDIR 45101" -Noun ($beda+"45101") -Path $log -Type Long -Status Bad -Output String) + "`n"
         $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status -Output String) + "`n"
         $hasError = $true
     }
@@ -336,7 +336,7 @@ Write-Line -Length 50 -Path $log
 
 
 
-# 6 Clear contents in folders in $clearList
+# 6 Clear contents in $clearList
 
 Write-Log -Verb "CLEAR FOLDER" -Noun "clearList" -Path $log -Type Long -Status System
 
@@ -368,7 +368,7 @@ Write-Line -Length 50 -Path $log
 
 
 
-# 7  Delete folders in $deleteList
+# 7  Delete contents and folders in $deleteList
 
 Write-Log -Verb "DELETE FOLDER" -Noun "deleteList" -Path $log -Type Long -Status System
 
@@ -378,7 +378,7 @@ $deleteList | ForEach-Object{
             try{
                 $temp = $_.FullName
                 Remove-Item $_.FullName -Force -ErrorAction Stop
-                Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Good
+                Write-Log -Verb "REMOVE FILE" -Noun $temp -Path $log -Type Long -Status Good
 
             }catch{
                 $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE" -Noun $_.FullName -Path $log -Type Long -Status Bad -Output String) + "`n"
@@ -389,7 +389,7 @@ $deleteList | ForEach-Object{
         try{
             $temp = $_
             Remove-Item $_ -Recurse -Force -ErrorAction Stop
-            Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Good
+            Write-Log -Verb "REMOVE FOLDER" -Noun $temp -Path $log -Type Long -Status Good
         }catch{
             $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Bad -Output String) + "`n"
             $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception.Message -Path $log -Type Short -Status Bad -Output String) + "`n"
@@ -417,8 +417,8 @@ if($workDay -eq 4){
 }
 $backupCount = (Get-ChildItem $backup_wd -Recurse -File -Exclude Thumbs.db).Count
 
-$mailMsg = $mailMsg + $back45_wd + "`n" + "RESULT " + $back45Count + " (EXPECTED " + $bedaCount + ")`n`n"
-$mailMsg = $mailMsg + $backup_wd + "`n" + "RESULT " + $backupCount + " (EXPECTED " + $tpeCount + ")`n`n"
+$mailMsg = $mailMsg + $back45_wd + "`n" + "BACKUP " + $back45Count + " (EXPECTED " + $bedaCount + ")`n`n"
+$mailMsg = $mailMsg + $backup_wd + "`n" + "BACKUP " + $backupCount + " (EXPECTED " + $tpeCount + ")`n`n"
 
 $clearList | ForEach-Object{ 
     $count = (Get-ChildItem $_ -Recurse -Exclude Thumbs.db).Count
@@ -431,8 +431,6 @@ $deleteList | ForEach-Object{
     if( $testpath -eq $false ){ $result = "DELETED" }else{ $result = "NOT DELETED"; $hasError = $true }
     $mailMsg = $mailMsg + $_ + "`n" + $result + "`n`n"
 }
-
-$mailMsg | Add-Content $log
 
 
 
