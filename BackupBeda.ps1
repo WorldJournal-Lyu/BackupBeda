@@ -103,18 +103,20 @@ if($safeList.Count -gt 1){
 # Define arrays
 
 if($workDay -eq 4){
-    $newList = @( $back45_wd, $weeklyPath, $backup_wd )
+    $mkdirList = @( $back45_wd, $weeklyPath, $backup_wd )
 }else{
-    $newList = @( $back45_wd, $backup_wd )
+    $mkdirList = @( $back45_wd, $backup_wd )
 }
 
-$thumbList   = @( $beda, $tpe, $graphic, $udngroup, $overseas, 
-                  $cmpsAT_30, $cmpsBO_30, $cmpsCH_30, $cmpsDC_30, $cmpsNJ_30, $cmpsNY_30, $cmpsNW_30 )
+$backupList    = @( $beda, $back45_wd, $tpe, $backup_wd )
 
-$clearList   = @( $graphic, $udngroup, $overseas )
+$thumbList     = @( $beda, $tpe, $graphic, $udngroup, $overseas, 
+                    $cmpsAT_30, $cmpsBO_30, $cmpsCH_30, $cmpsDC_30, $cmpsNJ_30, $cmpsNY_30, $cmpsNW_30 )
 
-$deleteList  = @( $back45_30, $backup_30, 
-                  $cmpsAT_30, $cmpsBO_30, $cmpsCH_30, $cmpsDC_30, $cmpsNJ_30, $cmpsNY_30, $cmpsNW_30 )
+$clearList     = @( $graphic, $udngroup, $overseas )
+
+$deleteList    = @( $back45_30, $backup_30, 
+                    $cmpsAT_30, $cmpsBO_30, $cmpsCH_30, $cmpsDC_30, $cmpsNJ_30, $cmpsNY_30, $cmpsNW_30 )
 
 # Log variables
 
@@ -134,6 +136,7 @@ Write-Line -Length 50 -Path $log
 if($workDay -eq 4){
     Write-Log -Verb "weeklyPath" -Noun $weeklyPath -Path $log -Type Short -Status Normal
     Write-Log -Verb "splin" -Noun $splin -Path $log -Type Short -Status Normal
+    Write-Log -Verb "lyu" -Noun $lyu -Path $log -Type Short -Status Normal
     Write-Line -Length 50 -Path $log
 }
 
@@ -163,8 +166,9 @@ Write-Log -Verb "safeList" -Noun ($safeList -join ", ") -Path $log -Type Short -
 Write-Log -Verb "regex" -Noun $regex -Path $log -Type Short -Status Normal
 Write-Line -Length 50 -Path $log
 
-$newList | ForEach-Object{ Write-Log -Verb "newList" -Noun $_ -Path $log -Type Short -Status Normal }
+$mkdirList | ForEach-Object{ Write-Log -Verb "mkdirList" -Noun $_ -Path $log -Type Short -Status Normal }
 $thumbList | ForEach-Object{ Write-Log -Verb "thumbList" -Noun $_ -Path $log -Type Short -Status Normal }
+$backupList | ForEach-Object{ Write-Log -Verb "backupList" -Noun $_ -Path $log -Type Short -Status Normal }
 $clearList | ForEach-Object{ Write-Log -Verb "clearList" -Noun $_ -Path $log -Type Short -Status Normal }
 $deleteList | ForEach-Object{ Write-Log -Verb "deleteList" -Noun $_ -Path $log -Type Short -Status Normal }
 
@@ -174,20 +178,20 @@ Write-Line -Length 50 -Path $log
 
 
 
-# 1 Create new folders in $newList
+# 1 Create folders in $mkdirList
 
-Write-Log -Verb "CREATE FOLDERS" -Noun "newList" -Path $log -Type Long -Status System
+Write-Log -Verb "CREATE FOLDER" -Noun "newList" -Path $log -Type Long -Status System
 
-$newList | ForEach-Object{
+$mkdirList | ForEach-Object{
     if(Test-Path $_){
-        Write-Log -Verb "IS EXIST" -Noun $_ -Path $log -Type Long -Status Good
+        Write-Log -Verb "CREATE SKIPPED" -Noun $_ -Path $log -Type Long -Status Warning
     }else{
         try{
             New-Item -ItemType Directory -Path $_ | Out-Null
-            Write-Log -Verb "NEW" -Noun $_ -Path $log -Type Long -Status Good
+            Write-Log -Verb "CREATE" -Noun $_ -Path $log -Type Long -Status Good
         }catch{
-            Write-Log -Verb "NEW" -Noun $_ -Path $log -Type Long -Status Bad
-            $mailMsg = $mailMsg + (Write-Log -Verb "NEW" -Noun $_ -Path $log -Type Long -Status Bad -Output String) + "`n"
+            Write-Log -Verb "CREATE" -Noun $_ -Path $log -Type Long -Status Bad
+            $mailMsg = $mailMsg + (Write-Log -Verb "CREATE" -Noun $_ -Path $log -Type Long -Status Bad -Output String) + "`n"
             $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status Bad -Output String) + "`n"
             $hasError = $true
         }
@@ -202,13 +206,12 @@ Write-Line -Length 50 -Path $log
 
 # 2 Delete thumbnails in folders in $thumbList
 
-Write-Log -Verb "DELETE THUMBNAILS" -Noun "thumbList" -Path $log -Type Long -Status System
+Write-Log -Verb "DELETE THUMBNAIL" -Noun "thumbList" -Path $log -Type Long -Status System
 
 $thumbList | ForEach-Object{
     Delete-Thumbs $_ | ForEach-Object{
         if( ($_.Status -eq "Bad") -or ($_.Status -eq "Warning") ){
             Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status
-            Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status
         }else{
             Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status
         }
@@ -221,7 +224,7 @@ Write-Line -Length 50 -Path $log
 
 
 
-# (Thursdays only) Backup weekly PDF for splin
+# 3 (Thursdays only) Backup weekly PDF for splin
 
 if(($workDay -eq 4) -and (Test-Path $weeklyPath)){
     Write-Log -Verb "BACKUP WEEKLY" -Noun $weeklyPath -Path $log -Type Long -Status System
@@ -241,34 +244,12 @@ if(($workDay -eq 4) -and (Test-Path $weeklyPath)){
     }else{
         Emailv3 -From $mailFrom -Pass $mailPass -To $splin -Subject ("Weekly PDF " + $workDate.ToString("yyyy-MM-dd")) -Body ("Path: Back45\"+$workDate.ToString("yyyyMMdd")+"\weeklyPDF"+" ("+$weeklyPdfCount+" files)")
     }
-    Write-Line -Length 50 -Path $log
-}
-
-
-
-
-
-# 3 Backup $beda to $back45_wd, exclude folders in $safeList
-
-Write-Log -Verb "BACKUP BEDA" -Noun "back45_wd "-Path $log -Type Long -Status System
-
-if(Test-Path $back45_wd){
-    Get-ChildItem $beda -Recurse | Where-Object{
-        !($_.FullName -match $regex)
-    } | Sort-Object FullName -Descending | Move-Files -From $beda -To $back45_wd | ForEach-Object{
-        #Write-Log -Verb "moveFrom" -Noun $_.MoveFrom -Path $log -Type Short -Status Normal
-        #Write-Log -Verb "moveTo" -Noun $_.MoveTo -Path $log -Type Short -Status Normal
-        if($_.Status -eq "Bad"){
-            $mailMsg = $mailMsg + (Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status -Output String) + "`n"
-            $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status -Output String) + "`n"
-            $hasError = $true
-        }else{
-            Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status
-        }
-    }
 }else{
-    $mailMsg = $mailMsg + (Write-Log -Verb "NOT EXIST" -Noun $back45_wd -Path $log -Type Long -Status Bad -Output String) + "`n"
-    $hasError = $true
+    if($workDay -eq 4){
+        Write-Log -Verb "BACKUP WEEKLY SKIPPED" -Noun $weeklyPath -Path $log -Type Long -Status Bad
+    }else{
+        Write-Log -Verb "BACKUP WEEKLY SKIPPED" -Noun "not Thursday" -Path $log -Type Long -Status Normal
+    }
 }
 
 Write-Line -Length 50 -Path $log
@@ -277,43 +258,76 @@ Write-Line -Length 50 -Path $log
 
 
 
-# (Monday to Friday) Create 45101 folder
+# 4 Backup files in $backupList
 
-if(($weekDay -ne 6) -or ($weekDay -ne 0)){
+Write-Log -Verb "BACKUP FILE" -Noun "backupList "-Path $log -Type Long -Status System
+
+For( $b=0; $b -lt $backupList.Count; $b+=2 ){ 
+    $source = $backupList[$b]
+    $destination = $backupList[$b+1]
+    if(Test-Path $destination){
+        Get-ChildItem $source -Exclude *.idlk -Recurse | Where-Object{!($_.FullName -match $regex)} | Sort-Object FullName -Descending | ForEach-Object{
+            $newFullName = ($_.FullName).Replace($source,$destination)
+            if($_.PSIsContainer){
+                if((Get-ChildItem $_.FullName).Count -eq 0){
+                    if(!(Test-Path $newFullName)){
+                        New-Item $newFullName -ItemType Directory | Out-Null
+                    }
+                    try{
+                        Remove-Item $_.FullName -Recurse -Force -ErrorAction Stop
+                        Write-Log -Verb "MOVE FOLDER" -Noun $newFullName -Path $log -Type Long -Status Good
+                    }catch{
+                        $mailMsg = $mailMsg + (Write-Log -Verb "MOVE FOLDER" -Noun $newFullName -Path $log -Type Long -Status Bad -Output String) + "`n"
+                        $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status Bad -Output String) + "`n"
+                        $hasError = $true
+                    }
+                }else{
+                    $mailMsg = $mailMsg + (Write-Log -Verb "MOVE FOLDER" -Noun $newFullName -Path $log -Type Long -Status Warning -Output String) + "`n"
+                    $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun "Path is not empty" -Path $log -Type Short -Status Warning -Output String) + "`n"
+                    $hasError = $true
+                }
+            }else{
+                $newParent = ($_.DirectoryName).Replace($source,$destination)
+                if(!(Test-Path $newParent)){
+                    New-Item $newParent -ItemType Directory | Out-Null
+                }
+                try{
+                    Move-Item $_.FullName $newFullName -ErrorAction Stop
+                    Write-Log -Verb "MOVE FILE" -Noun $newFullName -Path $log -Type Long -Status Good
+                }catch{
+                    $mailMsg = $mailMsg + (Write-Log -Verb "MOVE" -Noun $newFullName -Path $log -Type Long -Status Bad -Output String) + "`n"
+                    $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status Bad -Output String) + "`n"
+                    $hasError = $true
+                }
+            }
+        }
+    }else{
+        $mailMsg = $mailMsg + (Write-Log -Verb "BACKUP FILE SKIPPED" -Noun $source -Path $log -Type Long -Status Bad -Output String) + "`n"
+        $mailMsg = $mailMsg + (Write-Log -Verb "NOT EXIST" -Noun $destination -Path $log -Type Long -Status Bad -Output String) + "`n"
+        $hasError = $true
+    }
+}
+
+Write-Line -Length 50 -Path $log
+
+
+
+
+
+# 5 (Monday to Friday) Create 45101 folder
+
+if(($workDay -eq 6) -or ($workDay -eq 0)){
+    # on saturday and sunday, don't make this folder
+    Write-Log -Verb "MKDIR SKIPPED" -Noun ($beda+"45101") -Path $log -Type Long -Status Normal
+}else{
     try{    
         New-Item -ItemType Directory -Path ($beda+"45101") | Out-Null
-        Write-Log -Verb "NEW" -Noun ($beda+"45101") -Path $log -Type Long -Status Good
+        Write-Log -Verb "MKDIR" -Noun ($beda+"45101") -Path $log -Type Long -Status Good
     }catch{
-        $mailMsg = $mailMsg + (Write-Log -Verb "NEW" -Noun ($beda+"45101") -Path $log -Type Long -Status Bad -Output String) + "`n"
+        $mailMsg = $mailMsg + (Write-Log -Verb "MKDIR" -Noun ($beda+"45101") -Path $log -Type Long -Status Bad -Output String) + "`n"
         $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status -Output String) + "`n"
         $hasError = $true
     }
-    Write-Line -Length 50 -Path $log
-}
-
-
-
-
-
-# 4 Backup $tpe to $backup_wd
-
-Write-Log -Verb "BACKUP TPE" -Noun "backup_wd "-Path $log -Type Long -Status System
-
-if(Test-Path $backup_wd){
-    Get-ChildItem $tpe -Recurse | Sort-Object FullName -Descending | Move-Files -From $tpe -To $backup_wd | ForEach-Object{
-        #Write-Log -Verb "moveFrom" -Noun $_.MoveFrom -Path $log -Type Short -Status Normal
-        #Write-Log -Verb "moveTo" -Noun $_.MoveTo -Path $log -Type Short -Status Normal
-        if($_.Status -eq "Bad"){
-            $mailMsg = $mailMsg + (Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status -Output String) + "`n"
-            $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status -Output String) + "`n"
-            $hasError = $true
-        }else{
-            Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status
-        }
-    }
-}else{
-    $mailMsg = $mailMsg + (Write-Log -Verb "NOT EXIST" -Noun $backup_wd -Path $log -Type Long -Status Bad -Output String) + "`n"
-    $hasError = $true
 }
 
 Write-Line -Length 50 -Path $log
@@ -322,9 +336,9 @@ Write-Line -Length 50 -Path $log
 
 
 
-# 5 Clear contents in folders in $clearList
+# 6 Clear contents in folders in $clearList
 
-Write-Log -Verb "CLEAR FOLDERS" -Noun "clearList" -Path $log -Type Long -Status System
+Write-Log -Verb "CLEAR FOLDER" -Noun "clearList" -Path $log -Type Long -Status System
 
 $clearList | ForEach-Object{
     if(Test-Path $_){
@@ -344,7 +358,7 @@ $clearList | ForEach-Object{
             }
         }
     }else{
-        $mailMsg = $mailMsg + (Write-Log -Verb "NOT EXIST" -Noun $_ -Path $log -Type Long -Status Warning -Output String) + "`n"
+        $mailMsg = $mailMsg + (Write-Log -Verb "CLEAR FOLDER SKIPPED, NOT EXIST" -Noun $_ -Path $log -Type Long -Status Warning -Output String) + "`n"
         $hasError = $true
     }
 }
@@ -354,9 +368,9 @@ Write-Line -Length 50 -Path $log
 
 
 
-# 6 Clear and delete folders in $deleteList
+# 7  Delete folders in $deleteList
 
-Write-Log -Verb "DELETE FOLDERS" -Noun "deleteList" -Path $log -Type Long -Status System
+Write-Log -Verb "DELETE FOLDER" -Noun "deleteList" -Path $log -Type Long -Status System
 
 $deleteList | ForEach-Object{
     if(Test-Path $_){
@@ -382,7 +396,7 @@ $deleteList | ForEach-Object{
             $hasError = $true
         }
     }else{
-        Write-Log -Verb "NOT EXIST" -Noun $_ -Path $log -Type Long -Status Normal
+        Write-Log -Verb "DELETE FOLDER SKIPPED, NOT EXIST" -Noun $_ -Path $log -Type Long -Status Warning
     }
 }
 
@@ -392,7 +406,7 @@ Write-Line -Length 50 -Path $log
 
 
 
-# 7 Check result and compose mail
+# 8 Check result and compose mail
 
 if($workDay -eq 4){
     $back45Count = (Get-ChildItem $back45_wd -Recurse -File -Exclude Thumbs.db).Count - (Get-ChildItem $weeklyPath -Recurse -File -Exclude Thumbs.db).Count
