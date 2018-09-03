@@ -180,7 +180,7 @@ Write-Line -Length 50 -Path $log
 
 # 1 Create folders in $mkdirList
 
-Write-Log -Verb "CREATE FOLDER" -Noun "newList" -Path $log -Type Long -Status System
+Write-Log -Verb "CREATE FOLDER" -Noun "mkdirList" -Path $log -Type Long -Status System
 
 $mkdirList | ForEach-Object{
     if(Test-Path $_){
@@ -209,11 +209,18 @@ Write-Line -Length 50 -Path $log
 Write-Log -Verb "DELETE THUMBNAIL" -Noun "thumbList" -Path $log -Type Long -Status System
 
 $thumbList | ForEach-Object{
-    Delete-Thumbs $_ | ForEach-Object{
-        if( ($_.Status -eq "Bad") -or ($_.Status -eq "Warning") ){
-            Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status
-        }else{
-            Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status
+    $path = $_
+    if(Test-Path $path){
+        Get-ChildItem $path -Include Thumbs.db -Recurse -Force | ForEach-Object{
+            $verb = "DELETE THUMB"
+            $noun = $_.FullName
+            $_.Attributes = [System.IO.FileAttributes]::Normal
+            try{
+                Remove-Item $_.FullName -Force -ErrorAction Stop
+                Write-Log -Verb $verb -Noun $noun -Path $log -Type Long -Status "Good"
+            }catch{
+                Write-Log -Verb $verb -Noun $noun -Path $log -Type Long -Status "Warning"
+            }
         }
     }
 }
@@ -266,36 +273,38 @@ For( $b=0; $b -lt $backupList.Count; $b+=2 ){
     $source = $backupList[$b]
     $destination = $backupList[$b+1]
     if(Test-Path $destination){
-        Get-ChildItem $source -Exclude *.idlk -Recurse | Where-Object{!($_.FullName -match $regex)} | Sort-Object FullName -Descending | ForEach-Object{
+        Get-ChildItem $source -Recurse | Where-Object{!($_.FullName -match $regex)} | Sort-Object FullName -Descending | ForEach-Object{
             $newFullName = ($_.FullName).Replace($source,$destination)
             if($_.PSIsContainer){
+                $verb = "MOVE FOLDER"
                 if((Get-ChildItem $_.FullName).Count -eq 0){
                     if(!(Test-Path $newFullName)){
                         New-Item $newFullName -ItemType Directory | Out-Null
                     }
                     try{
                         Remove-Item $_.FullName -Recurse -Force -ErrorAction Stop
-                        Write-Log -Verb "MOVE FOLDER" -Noun $newFullName -Path $log -Type Long -Status Good
+                        Write-Log -Verb $verb -Noun $newFullName -Path $log -Type Long -Status Good
                     }catch{
-                        $mailMsg = $mailMsg + (Write-Log -Verb "MOVE FOLDER" -Noun $newFullName -Path $log -Type Long -Status Bad -Output String) + "`n"
+                        $mailMsg = $mailMsg + (Write-Log -Verb $verb -Noun $newFullName -Path $log -Type Long -Status Bad -Output String) + "`n"
                         $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status Bad -Output String) + "`n"
                         $hasError = $true
                     }
                 }else{
-                    $mailMsg = $mailMsg + (Write-Log -Verb "MOVE FOLDER" -Noun $newFullName -Path $log -Type Long -Status Warning -Output String) + "`n"
+                    $mailMsg = $mailMsg + (Write-Log -Verb $verb -Noun $newFullName -Path $log -Type Long -Status Warning -Output String) + "`n"
                     $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun "Path is not empty" -Path $log -Type Short -Status Warning -Output String) + "`n"
                     $hasError = $true
                 }
             }else{
+                $verb = "MOVE FILE"
                 $newParent = ($_.DirectoryName).Replace($source,$destination)
                 if(!(Test-Path $newParent)){
                     New-Item $newParent -ItemType Directory | Out-Null
                 }
                 try{
                     Move-Item $_.FullName $newFullName -ErrorAction Stop
-                    Write-Log -Verb "MOVE FILE" -Noun $newFullName -Path $log -Type Long -Status Good
+                    Write-Log -Verb $verb -Noun $newFullName -Path $log -Type Long -Status Good
                 }catch{
-                    $mailMsg = $mailMsg + (Write-Log -Verb "MOVE" -Noun $newFullName -Path $log -Type Long -Status Bad -Output String) + "`n"
+                    $mailMsg = $mailMsg + (Write-Log -Verb $verb -Noun $newFullName -Path $log -Type Long -Status Bad -Output String) + "`n"
                     $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status Bad -Output String) + "`n"
                     $hasError = $true
                 }
@@ -318,13 +327,13 @@ Write-Line -Length 50 -Path $log
 
 if(($workDay -eq 6) -or ($workDay -eq 0)){
     # on saturday and sunday, don't make this folder
-    Write-Log -Verb "MKDIR 45101 SKIPPED" -Noun "not WEEKDAY" -Path $log -Type Long -Status Normal
+    Write-Log -Verb "CREATE 45101 SKIPPED" -Noun "not WEEKDAY" -Path $log -Type Long -Status Normal
 }else{
     try{    
         New-Item -ItemType Directory -Path ($beda+"45101") | Out-Null
-        Write-Log -Verb "MKDIR 45101" -Noun ($beda+"45101") -Path $log -Type Long -Status Good
+        Write-Log -Verb "CREATE 45101" -Noun ($beda+"45101") -Path $log -Type Long -Status Good
     }catch{
-        $mailMsg = $mailMsg + (Write-Log -Verb "MKDIR 45101" -Noun ($beda+"45101") -Path $log -Type Long -Status Bad -Output String) + "`n"
+        $mailMsg = $mailMsg + (Write-Log -Verb "CREATE 45101" -Noun ($beda+"45101") -Path $log -Type Long -Status Bad -Output String) + "`n"
         $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status -Output String) + "`n"
         $hasError = $true
     }
@@ -346,12 +355,13 @@ $clearList | ForEach-Object{
             Write-Log -Verb "IS EMPTY" -Noun $_ -Path $log -Type Long -Status Normal
         }else{
             Get-ChildItem $_ -Recurse | Sort-Object FullName -Descending | ForEach-Object{
+                if($_.PSIsContainer){$verb="REMOVE FOLDER"}Else{$verb="REMOVE FILE"}
                 try{
                     $temp = $_.FullName
                     Remove-Item $_.FullName -Force -ErrorAction Stop
-                    Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Good
+                    Write-Log -Verb $verb -Noun $temp -Path $log -Type Long -Status Good
                 }catch{
-                    $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE" -Noun $_.FullName -Path $log -Type Long -Status Bad -Output String) + "`n"
+                    $mailMsg = $mailMsg + (Write-Log -Verb $verb -Noun $_.FullName -Path $log -Type Long -Status Bad -Output String) + "`n"
                     $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status Bad -Output String) + "`n"
                     $hasError = $true
                 }
@@ -368,6 +378,7 @@ Write-Line -Length 50 -Path $log
 
 
 
+
 # 7  Delete contents and folders in $deleteList
 
 Write-Log -Verb "DELETE FOLDER" -Noun "deleteList" -Path $log -Type Long -Status System
@@ -375,13 +386,14 @@ Write-Log -Verb "DELETE FOLDER" -Noun "deleteList" -Path $log -Type Long -Status
 $deleteList | ForEach-Object{
     if(Test-Path $_){
         Get-ChildItem $_ -Recurse | Sort-Object FullName -Descending | ForEach-Object{
+            if($_.PSIsContainer){$verb="REMOVE FOLDER"}Else{$verb="REMOVE FILE"}
             try{
                 $temp = $_.FullName
                 Remove-Item $_.FullName -Force -ErrorAction Stop
-                Write-Log -Verb "REMOVE FILE" -Noun $temp -Path $log -Type Long -Status Good
+                Write-Log -Verb $verb -Noun $temp -Path $log -Type Long -Status Good
 
             }catch{
-                $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE" -Noun $_.FullName -Path $log -Type Long -Status Bad -Output String) + "`n"
+                $mailMsg = $mailMsg + (Write-Log -Verb $verb -Noun $_.FullName -Path $log -Type Long -Status Bad -Output String) + "`n"
                 $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status Bad -Output String) + "`n"
                 $hasError = $true
             }
@@ -391,7 +403,7 @@ $deleteList | ForEach-Object{
             Remove-Item $_ -Recurse -Force -ErrorAction Stop
             Write-Log -Verb "REMOVE FOLDER" -Noun $temp -Path $log -Type Long -Status Good
         }catch{
-            $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Bad -Output String) + "`n"
+            $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE FOLDER" -Noun $temp -Path $log -Type Long -Status Bad -Output String) + "`n"
             $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception.Message -Path $log -Type Short -Status Bad -Output String) + "`n"
             $hasError = $true
         }
@@ -410,15 +422,16 @@ Write-Line -Length 50 -Path $log
 
 Write-Log -Verb "COMPOSE" -Noun "mailMsg" -Path $log -Type Long -Status Normal
 
+if($hasError){ $mailMsg = $mailMsg + "`n`n--`n" }
+
+$back45Count = (Get-ChildItem $back45_wd -Recurse -File -Exclude Thumbs.db).Count
 if($workDay -eq 4){
-    $back45Count = (Get-ChildItem $back45_wd -Recurse -File -Exclude Thumbs.db).Count - (Get-ChildItem $weeklyPath -Recurse -File -Exclude Thumbs.db).Count
-}else{
-    $back45Count = (Get-ChildItem $back45_wd -Recurse -File -Exclude Thumbs.db).Count
+    $back45Count = $back45Count - (Get-ChildItem $weeklyPath -Recurse -File -Exclude Thumbs.db).Count
 }
 $backupCount = (Get-ChildItem $backup_wd -Recurse -File -Exclude Thumbs.db).Count
 
-$mailMsg = $mailMsg + $back45_wd + "`n" + "BACKUP " + $back45Count + " (EXPECTED " + $bedaCount + ")`n`n"
-$mailMsg = $mailMsg + $backup_wd + "`n" + "BACKUP " + $backupCount + " (EXPECTED " + $tpeCount + ")`n`n"
+$mailMsg = $mailMsg + $back45_wd + "`n" + "BACKUP " + $back45Count + " (OUT OF " + $bedaCount + ")`n`n"
+$mailMsg = $mailMsg + $backup_wd + "`n" + "BACKUP " + $backupCount + " (OUT OF " + $tpeCount + ")`n`n"
 
 $clearList | ForEach-Object{ 
     $count = (Get-ChildItem $_ -Recurse -Exclude Thumbs.db).Count
