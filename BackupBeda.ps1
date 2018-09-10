@@ -282,7 +282,7 @@ For( $b=0; $b -lt $backupList.Count; $b+=2 ){
                         New-Item $newFullName -ItemType Directory | Out-Null
                     }
                     try{
-                        Remove-Item $_.FullName -Recurse -Force -ErrorAction Stop
+                        Remove-Item $_.FullName -Force -ErrorAction Stop
                         Write-Log -Verb $verb -Noun $newFullName -Path $log -Type Long -Status Good
                     }catch{
                         $mailMsg = $mailMsg + (Write-Log -Verb $verb -Noun $newFullName -Path $log -Type Long -Status Bad -Output String) + "`n"
