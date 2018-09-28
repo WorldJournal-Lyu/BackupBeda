@@ -110,7 +110,9 @@ if($workDay -eq 4){
 
 $backupList    = @( $beda, $back45_wd, $tpe, $backup_wd )
 
-$thumbList     = @( $beda, $tpe, $graphic, $udngroup, $overseas, 
+$thumbList     = @( $beda, $tpe, 
+                    $graphic, $udngroup, $overseas, 
+                    $back45_30, $backup_30, 
                     $cmpsAT_30, $cmpsBO_30, $cmpsCH_30, $cmpsDC_30, $cmpsNJ_30, $cmpsNY_30, $cmpsNW_30 )
 
 $clearList     = @( $graphic, $udngroup, $overseas )
@@ -216,7 +218,7 @@ $thumbList | ForEach-Object{
             $noun = $_.FullName
             $_.Attributes = [System.IO.FileAttributes]::Normal
             try{
-                Remove-Item $_.FullName -Force -ErrorAction Stop -Confirm:$false
+                Remove-Item $_.FullName -Force -ErrorAction Stop
                 Write-Log -Verb $verb -Noun $noun -Path $log -Type Long -Status "Good"
             }catch{
                 Write-Log -Verb $verb -Noun $noun -Path $log -Type Long -Status "Warning"
@@ -358,7 +360,7 @@ $clearList | ForEach-Object{
                 if($_.PSIsContainer){$verb="REMOVE FOLDER"}Else{$verb="REMOVE FILE"}
                 try{
                     $temp = $_.FullName
-                    Remove-Item $_.FullName -Force -ErrorAction Stop -Confirm:$false
+                    Remove-Item $_.FullName -Force -ErrorAction Stop
                     Write-Log -Verb $verb -Noun $temp -Path $log -Type Long -Status Good
                 }catch{
                     $mailMsg = $mailMsg + (Write-Log -Verb $verb -Noun $_.FullName -Path $log -Type Long -Status Bad -Output String) + "`n"
@@ -389,7 +391,7 @@ $deleteList | ForEach-Object{
             if($_.PSIsContainer){$verb="REMOVE FOLDER"}Else{$verb="REMOVE FILE"}
             try{
                 $temp = $_.FullName
-                Remove-Item $_.FullName -Force -ErrorAction Stop -Confirm:$false
+                Remove-Item $_.FullName -Force -ErrorAction Stop
                 Write-Log -Verb $verb -Noun $temp -Path $log -Type Long -Status Good
 
             }catch{
@@ -400,7 +402,7 @@ $deleteList | ForEach-Object{
         }
         try{
             $temp = $_
-            Remove-Item $_ -Recurse -Force -ErrorAction Stop -Confirm:$false
+            Remove-Item $_ -Recurse -Force -ErrorAction Stop
             Write-Log -Verb "REMOVE FOLDER" -Noun $temp -Path $log -Type Long -Status Good
         }catch{
             $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE FOLDER" -Noun $temp -Path $log -Type Long -Status Bad -Output String) + "`n"
@@ -458,7 +460,7 @@ Write-Line -Length 50 -Path $log
 Write-Log -Verb "REMOVE" -Noun $localTemp -Path $log -Type Long -Status Normal
 try{
     $temp = $localTemp
-    Remove-Item $localTemp -Recurse -Force -ErrorAction Stop -Confirm:$false
+    Remove-Item $localTemp -Recurse -Force -ErrorAction Stop
     Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Good
 }catch{
     $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Bad -Output String) + "`n"
