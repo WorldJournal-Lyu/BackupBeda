@@ -231,7 +231,7 @@ Write-Line -Length 50 -Path $log
 
 
 
-
+<#
 
 # 3 (Thursdays only) Backup weekly PDF for splin
 
@@ -264,7 +264,7 @@ if(($workDay -eq 4) -and (Test-Path $weeklyPath)){
 Write-Line -Length 50 -Path $log
 
 
-
+#>
 
 
 # 4 Backup files in $backupList
